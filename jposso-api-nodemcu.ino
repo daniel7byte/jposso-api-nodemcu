@@ -1,3 +1,4 @@
+
 //
 // Copyright 2015 Google Inc.
 //
@@ -52,17 +53,19 @@ void setup() {
 
 void loop() {
 
+  String sensorName = "ds18b20-5";
+
   DynamicJsonBuffer jsonBuffer;
 
   JsonObject& temperatureObject = jsonBuffer.createObject();
   JsonObject& tempTime = temperatureObject.createNestedObject("timestamp");
   temperatureObject[".sv"] = "timestamp";
 
-  String input = "{\"sensor\":\"ds18b20-1\",\"timestmap\": {\".sv\": \"timestamp\"} ,\"value\":"+String(n)+"}";
+  String input = "{\"timestamp\": {\".sv\": \"timestamp\"} ,\"value\":"+String(n)+"}";
   JsonObject& data = jsonBuffer.parseObject(input);
   
   // append a new value to /logs
-  String name = Firebase.push(device, data);
+  String name = Firebase.push(device + "/" + sensorName, data);
   // handle error
   if (Firebase.failed()) {
       Serial.print("pushing " + device + " failed:");
@@ -73,7 +76,7 @@ void loop() {
   Serial.println("");
 
   // update value
-  Firebase.setFloat(device + "/value", n);
+  Firebase.setFloat(device + "/" + sensorName + "/value", n);
   // handle error
   if (Firebase.failed()) {
       Serial.print("setting /value failed:");
