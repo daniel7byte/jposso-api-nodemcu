@@ -28,62 +28,69 @@
 // Set these to run example.
 #define FIREBASE_HOST "jposso-iot-dashboard.firebaseio.com"
 #define FIREBASE_AUTH "gLoK8I6JkREQqSbXFg7Lea1sRz2WFuRGfadsIcus"
-#define WIFI_SSID "Leydig"
-#define WIFI_PASSWORD "94232607."
 
+// WiFi
+#define WIFI_SSID "Leydig"
+#define WIFI_PASSWORD "L19852001"
+
+// Nombre del dispositivo
 String device = "nodemcu-1";
-int n = 0;
+
+// Variable Temporal
+float n = -5;
 
 void setup() {
+  // Abre el puerto Serie
   Serial.begin(9600);
 
-  // connect to wifi.
+  // Conecta a la red WiFi.
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("connecting");
+  Serial.print("Conectando");
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(500);
   }
   Serial.println();
-  Serial.print("connected: ");
+  Serial.print("Conectado, mi IP es: ");
   Serial.println(WiFi.localIP());
-  
+
+  // Se conecta y autentica con Firebase
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
 void loop() {
 
+  // Nombre del Sensor
   String sensorName = "ds18b20-5";
 
+  // Inicializa la clase JSON
   DynamicJsonBuffer jsonBuffer;
 
-  JsonObject& temperatureObject = jsonBuffer.createObject();
-  JsonObject& tempTime = temperatureObject.createNestedObject("timestamp");
-  temperatureObject[".sv"] = "timestamp";
-
+  // Estructura la informacion
   String input = "{\"timestamp\": {\".sv\": \"timestamp\"} ,\"value\":"+String(n)+"}";
   JsonObject& data = jsonBuffer.parseObject(input);
   
-  // append a new value to /logs
+  // Agrega un nuevo valor para /device/sensorName
   String name = Firebase.push(device + "/" + sensorName, data);
-  // handle error
+  
+  // Si se produce errores
   if (Firebase.failed()) {
-      Serial.print("pushing " + device + " failed:");
+      Serial.print("pushing " + device + "/" + sensorName + " failed:");
       Serial.println(Firebase.error());  
       return;
   }
-  Serial.print("pushed: /logs/");
-  Serial.println("");
+  Serial.println("pushed: /" + device + "/" + sensorName);
 
-  // update value
+  // Actualiza valor unico en el sensor
   Firebase.setFloat(device + "/" + sensorName + "/value", n);
-  // handle error
+  
+  // Si se produce errores
   if (Firebase.failed()) {
-      Serial.print("setting /value failed:");
+      Serial.print("setting " + device + "/" + sensorName + "/value" + " failed:");
       Serial.println(Firebase.error());  
       return;
   }
 
-  n = n + 1;
+  n = n + 0.5;
   delay(5000);
 }
