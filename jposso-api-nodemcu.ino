@@ -30,7 +30,7 @@
 #define FIREBASE_AUTH "gLoK8I6JkREQqSbXFg7Lea1sRz2WFuRGfadsIcus"
 
 // WiFi
-#define WIFI_SSID "Leydig"
+#define WIFI_SSID "LeydiG"
 #define WIFI_PASSWORD "L19852001"
 
 // Nombre del dispositivo
