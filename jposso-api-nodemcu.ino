@@ -60,7 +60,7 @@ void setup()
   while (WiFi.status() != WL_CONNECTED)
   {
     Serial.print(".");
-    delay(500);
+    delay(250);
   }
   Serial.println();
   Serial.print("Conectado, mi IP es: ");
@@ -70,36 +70,32 @@ void setup()
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
+float valorTempAnterior = -1000;
+float valorTempActual = 0;
+
 void loop()
 {
-  // Promedio de valores con 100 iteraciones cada 10 milisegundos
-  int i = 1;
-  float sumatoriaTemp = 0;
-  while (i <= 100)
+  // Tomamos la temperatura
+  sensorDS18B20.requestTemperatures();
+  Serial.println(sensorDS18B20.getTempCByIndex(0));
+
+  if(valorTempAnterior == -1000)
   {
-    // Tomamos la temperatura
-    sensorDS18B20.requestTemperatures();
-
-    // Leemos y mostramos los datos de los sensores DS18B20
-    //Serial.print("Temperatura sensor 0: ");
-    //Serial.println(sensorDS18B20.getTempCByIndex(0));
-
-    sumatoriaTemp = sumatoriaTemp + sensorDS18B20.getTempCByIndex(0);
-
-    delay(10);
-    i++;
+    valorTempAnterior = sensorDS18B20.getTempCByIndex(0); 
   }
 
-  float valorTemp = sumatoriaTemp / i;
+  valorTempActual = (valorTempAnterior + sensorDS18B20.getTempCByIndex(0))/2;
+
+  valorTempAnterior = valorTempActual;
 
   // Nombre del Sensor
-  String sensorName = "ds18b20-5";
+  String sensorName = "ds18b20-x";
 
   // Inicializa la clase JSON
   DynamicJsonBuffer jsonBuffer;
 
   // Estructura la informacion
-  String input = "{\"timestamp\": {\".sv\": \"timestamp\"} ,\"value\":" + String(valorTemp) + "}";
+  String input = "{\"timestamp\": {\".sv\": \"timestamp\"} ,\"value\":" + String(valorTempActual) + "}";
   JsonObject &data = jsonBuffer.parseObject(input);
 
   // Agrega un nuevo valor para /device/sensorName
@@ -115,7 +111,7 @@ void loop()
   Serial.println("pushed: /" + device + "/" + sensorName);
 
   // Actualiza valor unico en el sensor
-  Firebase.setFloat(device + "/" + sensorName + "/value", n);
+  Firebase.setFloat(device + "/" + sensorName + "/value", valorTempActual);
 
   // Si se produce errores
   if (Firebase.failed())
@@ -124,7 +120,4 @@ void loop()
     Serial.println(Firebase.error());
     return;
   }
-
-  n = n + 0.5;
-  delay(5000);
 }
