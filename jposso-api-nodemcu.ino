@@ -25,6 +25,9 @@
 #include <FirebaseArduino.h>
 #include <ArduinoJson.h>
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
 // Set these to run example.
 #define FIREBASE_HOST "jposso-iot-dashboard.firebaseio.com"
 #define FIREBASE_AUTH "gLoK8I6JkREQqSbXFg7Lea1sRz2WFuRGfadsIcus"
@@ -36,17 +39,26 @@
 // Nombre del dispositivo
 String device = "nodemcu-1";
 
-// Variable Temporal
-float n = -5;
+// Puerto Sensor
+#define SENSOR_PORT D2
 
-void setup() {
+// Configura la libreria OneWire
+OneWire oneWireObjeto(SENSOR_PORT);
+DallasTemperature sensorDS18B20(&oneWireObjeto);
+
+void setup()
+{
   // Abre el puerto Serie
   Serial.begin(9600);
+
+  // Conecta con el sensor
+  sensorDS18B20.begin();
 
   // Conecta a la red WiFi.
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Conectando");
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     Serial.print(".");
     delay(500);
   }
@@ -58,7 +70,27 @@ void setup() {
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
-void loop() {
+void loop()
+{
+  // Promedio de valores con 100 iteraciones cada 10 milisegundos
+  int i = 1;
+  float sumatoriaTemp = 0;
+  while (i <= 100)
+  {
+    // Tomamos la temperatura
+    sensorDS18B20.requestTemperatures();
+
+    // Leemos y mostramos los datos de los sensores DS18B20
+    //Serial.print("Temperatura sensor 0: ");
+    //Serial.println(sensorDS18B20.getTempCByIndex(0));
+
+    sumatoriaTemp = sumatoriaTemp + sensorDS18B20.getTempCByIndex(0);
+
+    delay(10);
+    i++;
+  }
+
+  float valorTemp = sumatoriaTemp / i;
 
   // Nombre del Sensor
   String sensorName = "ds18b20-5";
@@ -67,28 +99,30 @@ void loop() {
   DynamicJsonBuffer jsonBuffer;
 
   // Estructura la informacion
-  String input = "{\"timestamp\": {\".sv\": \"timestamp\"} ,\"value\":"+String(n)+"}";
-  JsonObject& data = jsonBuffer.parseObject(input);
-  
+  String input = "{\"timestamp\": {\".sv\": \"timestamp\"} ,\"value\":" + String(valorTemp) + "}";
+  JsonObject &data = jsonBuffer.parseObject(input);
+
   // Agrega un nuevo valor para /device/sensorName
   String name = Firebase.push(device + "/" + sensorName, data);
-  
+
   // Si se produce errores
-  if (Firebase.failed()) {
-      Serial.print("pushing " + device + "/" + sensorName + " failed:");
-      Serial.println(Firebase.error());  
-      return;
+  if (Firebase.failed())
+  {
+    Serial.print("pushing " + device + "/" + sensorName + " failed:");
+    Serial.println(Firebase.error());
+    return;
   }
   Serial.println("pushed: /" + device + "/" + sensorName);
 
   // Actualiza valor unico en el sensor
   Firebase.setFloat(device + "/" + sensorName + "/value", n);
-  
+
   // Si se produce errores
-  if (Firebase.failed()) {
-      Serial.print("setting " + device + "/" + sensorName + "/value" + " failed:");
-      Serial.println(Firebase.error());  
-      return;
+  if (Firebase.failed())
+  {
+    Serial.print("setting " + device + "/" + sensorName + "/value" + " failed:");
+    Serial.println(Firebase.error());
+    return;
   }
 
   n = n + 0.5;
