@@ -37,7 +37,10 @@
 #define WIFI_PASSWORD "L19852001"
 
 // Nombre del dispositivo
-String device = "nodemcu-1";
+const String device = "nodemcu-1";
+
+// Nombre del Sensor
+const String sensorName = "ds18b20-x";
 
 // Puerto Sensor
 #define SENSOR_PORT D2
@@ -70,7 +73,8 @@ void setup()
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
-float valorTempAnterior = -1000;
+bool primeraMuestra = true;
+float valorTempAnterior = 0; // Valor que nunca tomará, solo
 float valorTempActual = 0;
 
 void loop()
@@ -79,17 +83,16 @@ void loop()
   sensorDS18B20.requestTemperatures();
   Serial.println(sensorDS18B20.getTempCByIndex(0));
 
-  if(valorTempAnterior == -1000)
+  if(primeraMuestra)
   {
-    valorTempAnterior = sensorDS18B20.getTempCByIndex(0); 
+    valorTempAnterior = sensorDS18B20.getTempCByIndex(0);
+    primeraMuestra = false;
   }
 
+  // Promedia la medicion
   valorTempActual = (valorTempAnterior + sensorDS18B20.getTempCByIndex(0))/2;
 
   valorTempAnterior = valorTempActual;
-
-  // Nombre del Sensor
-  String sensorName = "ds18b20-x";
 
   // Inicializa la clase JSON
   DynamicJsonBuffer jsonBuffer;
@@ -120,4 +123,6 @@ void loop()
     Serial.println(Firebase.error());
     return;
   }
+
+  delay(2000);
 }
